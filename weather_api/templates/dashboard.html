@@ -1,0 +1,466 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - GlobalMet Weather{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h2 mb-0">
+                        <i class="fas fa-cloud-sun text-primary"></i>
+                        Dashboard Meteorológico
+                    </h1>
+                    <p class="text-muted mb-0">Estación 689 - GlobalMet API</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <input type="date" id="date-picker" class="form-control" value="{{ current_date }}">
+                    <button id="refresh-btn" class="btn btn-primary">
+                        <i class="fas fa-sync-alt"></i> Actualizar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div id="loading" class="text-center py-5" style="display: none;">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Cargando...</span>
+        </div>
+        <p class="mt-2 text-muted">Cargando datos meteorológicos...</p>
+    </div>
+
+    <!-- Error Alert -->
+    <div id="error-alert" class="alert alert-danger" style="display: none;">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span id="error-message"></span>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4" id="stats-cards">
+        <div class="col-md-2 col-sm-6 mb-3">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="d-flex justify-content-center align-items-center mb-2">
+                        <i class="fas fa-thermometer-half fa-2x text-danger"></i>
+                    </div>
+                    <h6 class="card-title text-muted">Temperatura</h6>
+                    <div id="temp-stats">
+                        <div class="small text-muted">Min: <span id="temp-min">--</span>°C</div>
+                        <div class="h5 mb-0 text-danger">Prom: <span id="temp-avg">--</span>°C</div>
+                        <div class="small text-muted">Max: <span id="temp-max">--</span>°C</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-2 col-sm-6 mb-3">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="d-flex justify-content-center align-items-center mb-2">
+                        <i class="fas fa-tint fa-2x text-info"></i>
+                    </div>
+                    <h6 class="card-title text-muted">Humedad</h6>
+                    <div id="humidity-stats">
+                        <div class="small text-muted">Min: <span id="humidity-min">--</span>%</div>
+                        <div class="h5 mb-0 text-info">Prom: <span id="humidity-avg">--</span>%</div>
+                        <div class="small text-muted">Max: <span id="humidity-max">--</span>%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-2 col-sm-6 mb-3">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="d-flex justify-content-center align-items-center mb-2">
+                        <i class="fas fa-wind fa-2x text-success"></i>
+                    </div>
+                    <h6 class="card-title text-muted">Viento</h6>
+                    <div id="wind-stats">
+                        <div class="small text-muted">Min: <span id="wind-min">--</span> km/h</div>
+                        <div class="h5 mb-0 text-success">Prom: <span id="wind-avg">--</span> km/h</div>
+                        <div class="small text-muted">Max: <span id="wind-max">--</span> km/h</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-2 col-sm-6 mb-3">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="d-flex justify-content-center align-items-center mb-2">
+                        <i class="fas fa-hurricane fa-2x text-warning"></i>
+                    </div>
+                    <h6 class="card-title text-muted">Ráfagas</h6>
+                    <div id="gust-stats">
+                        <div class="small text-muted">Min: <span id="gust-min">--</span> km/h</div>
+                        <div class="h5 mb-0 text-warning">Prom: <span id="gust-avg">--</span> km/h</div>
+                        <div class="small text-muted">Max: <span id="gust-max">--</span> km/h</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-2 col-sm-6 mb-3">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="d-flex justify-content-center align-items-center mb-2">
+                        <i class="fas fa-gauge-high fa-2x text-secondary"></i>
+                    </div>
+                    <h6 class="card-title text-muted">Presión</h6>
+                    <div id="pressure-stats">
+                        <div class="small text-muted">Min: <span id="pressure-min">--</span> mb</div>
+                        <div class="h5 mb-0 text-secondary">Prom: <span id="pressure-avg">--</span> mb</div>
+                        <div class="small text-muted">Max: <span id="pressure-max">--</span> mb</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-2 col-sm-6 mb-3">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="d-flex justify-content-center align-items-center mb-2">
+                        <i class="fas fa-database fa-2x text-primary"></i>
+                    </div>
+                    <h6 class="card-title text-muted">Registros</h6>
+                    <div id="data-count">
+                        <div class="h5 mb-0 text-primary">
+                            <span id="record-count">--</span>
+                        </div>
+                        <div class="small text-muted">mediciones</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="row">
+        <!-- Temperature Chart -->
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-thermometer-half text-danger"></i>
+                        Temperatura
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="temperature-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Humidity Chart -->
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-tint text-info"></i>
+                        Humedad
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="humidity-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Wind Chart -->
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-wind text-success"></i>
+                        Viento
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="wind-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pressure Chart -->
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-gauge-high text-secondary"></i>
+                        Presión Atmosférica
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="pressure-chart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Combined Chart -->
+    <div class="row">
+        <div class="col-12 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-chart-line text-primary"></i>
+                        Resumen General
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="combined-chart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Global variables for charts
+    let charts = {};
+    let weatherData = null;
+
+    // Initialize dashboard
+    $(document).ready(function() {
+        loadWeatherData();
+        
+        // Event listeners
+        $('#refresh-btn').click(function() {
+            loadWeatherData();
+        });
+        
+        $('#date-picker').change(function() {
+            loadWeatherData();
+        });
+    });
+
+    // Load weather data
+    function loadWeatherData() {
+        const selectedDate = $('#date-picker').val();
+        
+        // Show loading
+        $('#loading').show();
+        $('#error-alert').hide();
+        $('#stats-cards').hide();
+        
+        // Make AJAX request
+        $.ajax({
+            url: '{% url "weather_data" %}',
+            method: 'GET',
+            data: {
+                dia: selectedDate
+            },
+            success: function(data) {
+                if (data.success) {
+                    weatherData = data;
+                    updateStatistics(data.statistics);
+                    updateCharts(data.chart_data);
+                    $('#record-count').text(data.raw_data_count);
+                    $('#stats-cards').show();
+                } else {
+                    showError(data.error);
+                }
+            },
+            error: function(xhr, status, error) {
+                let errorMessage = 'Error al cargar los datos';
+                if (xhr.responseJSON && xhr.responseJSON.error) {
+                    errorMessage = xhr.responseJSON.error;
+                }
+                showError(errorMessage);
+            },
+            complete: function() {
+                $('#loading').hide();
+            }
+        });
+    }
+
+    // Update statistics cards
+    function updateStatistics(stats) {
+        // Temperature
+        $('#temp-min').text(stats.temperature.min !== null ? stats.temperature.min.toFixed(1) : '--');
+        $('#temp-avg').text(stats.temperature.promedio !== null ? stats.temperature.promedio.toFixed(1) : '--');
+        $('#temp-max').text(stats.temperature.max !== null ? stats.temperature.max.toFixed(1) : '--');
+        
+        // Humidity
+        $('#humidity-min').text(stats.humidity.min !== null ? stats.humidity.min.toFixed(1) : '--');
+        $('#humidity-avg').text(stats.humidity.promedio !== null ? stats.humidity.promedio.toFixed(1) : '--');
+        $('#humidity-max').text(stats.humidity.max !== null ? stats.humidity.max.toFixed(1) : '--');
+        
+        // Wind
+        $('#wind-min').text(stats.wind.min !== null ? stats.wind.min.toFixed(1) : '--');
+        $('#wind-avg').text(stats.wind.promedio !== null ? stats.wind.promedio.toFixed(1) : '--');
+        $('#wind-max').text(stats.wind.max !== null ? stats.wind.max.toFixed(1) : '--');
+        
+        // Gusts
+        $('#gust-min').text(stats.gust.min !== null ? stats.gust.min.toFixed(1) : '--');
+        $('#gust-avg').text(stats.gust.promedio !== null ? stats.gust.promedio.toFixed(1) : '--');
+        $('#gust-max').text(stats.gust.max !== null ? stats.gust.max.toFixed(1) : '--');
+        
+        // Pressure
+        $('#pressure-min').text(stats.pressure.min !== null ? stats.pressure.min.toFixed(1) : '--');
+        $('#pressure-avg').text(stats.pressure.promedio !== null ? stats.pressure.promedio.toFixed(1) : '--');
+        $('#pressure-max').text(stats.pressure.max !== null ? stats.pressure.max.toFixed(1) : '--');
+    }
+
+    // Update charts
+    function updateCharts(chartData) {
+        if (!chartData || !chartData.labels) {
+            return;
+        }
+        
+        // Destroy existing charts
+        Object.values(charts).forEach(chart => {
+            if (chart) chart.destroy();
+        });
+        
+        // Create new charts
+        createTemperatureChart(chartData);
+        createHumidityChart(chartData);
+        createWindChart(chartData);
+        createPressureChart(chartData);
+        createCombinedChart(chartData);
+    }
+
+    // Individual chart creation functions
+    function createTemperatureChart(chartData) {
+        const ctx = document.getElementById('temperature-chart').getContext('2d');
+        charts.temperature = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: chartData.labels,
+                datasets: [chartData.datasets.temperature]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        title: {
+                            display: true,
+                            text: 'Temperatura (°C)'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function createHumidityChart(chartData) {
+        const ctx = document.getElementById('humidity-chart').getContext('2d');
+        charts.humidity = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: chartData.labels,
+                datasets: [chartData.datasets.humidity]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        title: {
+                            display: true,
+                            text: 'Humedad (%)'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function createWindChart(chartData) {
+        const ctx = document.getElementById('wind-chart').getContext('2d');
+        charts.wind = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: chartData.labels,
+                datasets: [
+                    chartData.datasets.wind,
+                    chartData.datasets.gust
+                ]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Velocidad (km/h)'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function createPressureChart(chartData) {
+        const ctx = document.getElementById('pressure-chart').getContext('2d');
+        charts.pressure = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: chartData.labels,
+                datasets: [chartData.datasets.pressure]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        title: {
+                            display: true,
+                            text: 'Presión (mb)'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function createCombinedChart(chartData) {
+        const ctx = document.getElementById('combined-chart').getContext('2d');
+        charts.combined = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: chartData.labels,
+                datasets: [
+                    chartData.datasets.temperature,
+                    chartData.datasets.humidity,
+                    chartData.datasets.wind,
+                    chartData.datasets.pressure
+                ]
+            },
+            options: {
+                responsive: true,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                scales: {
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                    }
+                }
+            }
+        });
+    }
+
+    // Show error message
+    function showError(message) {
+        $('#error-message').text(message);
+        $('#error-alert').show();
+        $('#stats-cards').hide();
+    }
+</script>
+{% endblock %} 

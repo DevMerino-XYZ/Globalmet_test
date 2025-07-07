@@ -1,390 +1,201 @@
+"""
+Weather API Frontend Views
+
+This module contains Django views for the weather dashboard frontend.
+It includes the main dashboard view and AJAX endpoints for dynamic
+data loading and chart updates.
+"""
+
 from django.shortcuts import render
-import csv
-import io
-from django.http import HttpResponse
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from rest_framework import status
-from .services import GlobalMetAPIClient, WeatherDataProcessor
-import requests
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from django.views import View
+from .core.services import GlobalMetAPIClient, WeatherDataProcessor
+from .core.exceptions import WeatherAPIException
+from .utils.helpers import get_current_date_hermosillo
+import json
 
 
-@api_view(['GET'])
-def temperatura_estadisticas(request):
+def dashboard(request):
     """
-    GET /api/estadisticas/temperatura
-    Returns temperature statistics with optional unit conversion
+    Main dashboard view for the weather application.
+    
+    This view renders the main dashboard page with weather data visualization.
+    It provides the initial HTML structure and context for the interactive
+    weather dashboard interface.
+    
+    Args:
+        request: HTTP request object
+        
+    Returns:
+        HttpResponse: Rendered dashboard template
     """
-    try:
-        # Get query parameters
-        dia = request.GET.get('dia')
-        unidad = request.GET.get('unidad', 'celsius').lower()
-        
-        # Validate unit
-        if unidad not in ['celsius', 'fahrenheit', 'kelvin']:
-            return Response(
-                {'error': 'Unit must be celsius, fahrenheit, or kelvin'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Get data from GlobalMet API
-        client = GlobalMetAPIClient()
-        measurements = client.get_measurements_list(dia)
-        
-        # Calculate statistics
-        processor = WeatherDataProcessor()
-        stats = processor.calculate_statistics(measurements, 'temperatura_c')
-        
-        # Convert to requested unit
-        if unidad != 'celsius':
-            stats = processor.convert_temperature_stats(stats, unidad)
-        
-        return Response(stats)
-        
-    except ValueError as e:
-        return Response(
-            {'error': str(e)},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    except requests.RequestException as e:
-        return Response(
-            {'error': f'Error fetching data: {str(e)}'},
-            status=status.HTTP_503_SERVICE_UNAVAILABLE
-        )
-    except Exception as e:
-        return Response(
-            {'error': f'Internal server error: {str(e)}'},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
+    context = {
+        'title': 'Dashboard Meteorológico',
+        'current_date': get_current_date_hermosillo()
+    }
+    return render(request, 'dashboard.html', context)
 
 
-@api_view(['GET'])
-def humedad_estadisticas(request):
+class WeatherDataView(View):
     """
-    GET /api/estadisticas/humedad
-    Returns humidity statistics
+    AJAX endpoint for fetching weather data for the dashboard.
+    
+    This view provides a JSON API endpoint for the frontend dashboard
+    to fetch weather data dynamically. It processes the data and formats
+    it for chart visualization and statistics display.
     """
-    try:
-        dia = request.GET.get('dia')
+    
+    @method_decorator(csrf_exempt)
+    def dispatch(self, *args, **kwargs):
+        """Override dispatch to exempt CSRF validation for AJAX requests."""
+        return super().dispatch(*args, **kwargs)
+    
+    def get(self, request):
+        """
+        Fetch and process weather data for dashboard display.
         
-        client = GlobalMetAPIClient()
-        measurements = client.get_measurements_list(dia)
+        This method retrieves weather measurements from the GlobalMet API,
+        calculates statistics for all weather parameters, and formats the
+        data for use in charts and dashboard widgets.
         
-        processor = WeatherDataProcessor()
-        stats = processor.calculate_statistics(measurements, 'humedad_relativa')
-        
-        return Response(stats)
-        
-    except ValueError as e:
-        return Response(
-            {'error': str(e)},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    except requests.RequestException as e:
-        return Response(
-            {'error': f'Error fetching data: {str(e)}'},
-            status=status.HTTP_503_SERVICE_UNAVAILABLE
-        )
-    except Exception as e:
-        return Response(
-            {'error': f'Internal server error: {str(e)}'},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
-
-
-@api_view(['GET'])
-def viento_estadisticas(request):
-    """
-    GET /api/estadisticas/viento
-    Returns wind speed statistics
-    """
-    try:
-        dia = request.GET.get('dia')
-        
-        client = GlobalMetAPIClient()
-        measurements = client.get_measurements_list(dia)
-        
-        processor = WeatherDataProcessor()
-        stats = processor.calculate_statistics(measurements, 'viento_kmh')
-        
-        return Response(stats)
-        
-    except ValueError as e:
-        return Response(
-            {'error': str(e)},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    except requests.RequestException as e:
-        return Response(
-            {'error': f'Error fetching data: {str(e)}'},
-            status=status.HTTP_503_SERVICE_UNAVAILABLE
-        )
-    except Exception as e:
-        return Response(
-            {'error': f'Internal server error: {str(e)}'},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
-
-
-@api_view(['GET'])
-def rafaga_estadisticas(request):
-    """
-    GET /api/estadisticas/rafaga
-    Returns wind gust statistics
-    """
-    try:
-        dia = request.GET.get('dia')
-        
-        client = GlobalMetAPIClient()
-        measurements = client.get_measurements_list(dia)
-        
-        processor = WeatherDataProcessor()
-        stats = processor.calculate_statistics(measurements, 'viento_rafaga_kmh')
-        
-        return Response(stats)
-        
-    except ValueError as e:
-        return Response(
-            {'error': str(e)},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    except requests.RequestException as e:
-        return Response(
-            {'error': f'Error fetching data: {str(e)}'},
-            status=status.HTTP_503_SERVICE_UNAVAILABLE
-        )
-    except Exception as e:
-        return Response(
-            {'error': f'Internal server error: {str(e)}'},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
-
-
-@api_view(['GET'])
-def presion_estadisticas(request):
-    """
-    GET /api/estadisticas/presion
-    Returns pressure statistics
-    """
-    try:
-        dia = request.GET.get('dia')
-        
-        client = GlobalMetAPIClient()
-        measurements = client.get_measurements_list(dia)
-        
-        processor = WeatherDataProcessor()
-        stats = processor.calculate_statistics(measurements, 'presion_mb')
-        
-        return Response(stats)
-        
-    except ValueError as e:
-        return Response(
-            {'error': str(e)},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    except requests.RequestException as e:
-        return Response(
-            {'error': f'Error fetching data: {str(e)}'},
-            status=status.HTTP_503_SERVICE_UNAVAILABLE
-        )
-    except Exception as e:
-        return Response(
-            {'error': f'Internal server error: {str(e)}'},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
-
-
-@api_view(['GET'])
-def resumen_diario(request):
-    """
-    GET /api/resumen/diario
-    Returns all statistics in a single call
-    """
-    try:
-        dia = request.GET.get('dia')
-        unidad = request.GET.get('unidad', 'celsius').lower()
-        
-        # Validate unit
-        if unidad not in ['celsius', 'fahrenheit', 'kelvin']:
-            return Response(
-                {'error': 'Unit must be celsius, fahrenheit, or kelvin'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        client = GlobalMetAPIClient()
-        measurements = client.get_measurements_list(dia)
-        
-        processor = WeatherDataProcessor()
-        
-        # Calculate all statistics
-        temperatura_stats = processor.calculate_statistics(measurements, 'temperatura_c')
-        if unidad != 'celsius':
-            temperatura_stats = processor.convert_temperature_stats(temperatura_stats, unidad)
-        
-        humedad_stats = processor.calculate_statistics(measurements, 'humedad_relativa')
-        viento_stats = processor.calculate_statistics(measurements, 'viento_kmh')
-        rafaga_stats = processor.calculate_statistics(measurements, 'viento_rafaga_kmh')
-        presion_stats = processor.calculate_statistics(measurements, 'presion_mb')
-        
-        resumen = {
-            'temperatura': temperatura_stats,
-            'humedad': humedad_stats,
-            'viento': viento_stats,
-            'rafaga': rafaga_stats,
-            'presion': presion_stats
-        }
-        
-        return Response(resumen)
-        
-    except ValueError as e:
-        return Response(
-            {'error': str(e)},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    except requests.RequestException as e:
-        return Response(
-            {'error': f'Error fetching data: {str(e)}'},
-            status=status.HTTP_503_SERVICE_UNAVAILABLE
-        )
-    except Exception as e:
-        return Response(
-            {'error': f'Internal server error: {str(e)}'},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
-
-
-@api_view(['GET'])
-def exportar_estadisticas(request):
-    """
-    GET /api/exportar/estadisticas
-    Exports all statistics to CSV
-    """
-    try:
-        dia = request.GET.get('dia')
-        unidad = request.GET.get('unidad', 'celsius').lower()
-        
-        # Validate unit
-        if unidad not in ['celsius', 'fahrenheit', 'kelvin']:
-            return Response(
-                {'error': 'Unit must be celsius, fahrenheit, or kelvin'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        client = GlobalMetAPIClient()
-        measurements = client.get_measurements_list(dia)
-        
-        processor = WeatherDataProcessor()
-        
-        # Calculate all statistics
-        temperatura_stats = processor.calculate_statistics(measurements, 'temperatura_c')
-        if unidad != 'celsius':
-            temperatura_stats = processor.convert_temperature_stats(temperatura_stats, unidad)
-        
-        humedad_stats = processor.calculate_statistics(measurements, 'humedad_relativa')
-        viento_stats = processor.calculate_statistics(measurements, 'viento_kmh')
-        rafaga_stats = processor.calculate_statistics(measurements, 'viento_rafaga_kmh')
-        presion_stats = processor.calculate_statistics(measurements, 'presion_mb')
-        
-        # Create CSV
-        output = io.StringIO()
-        writer = csv.writer(output)
-        
-        # Write header
-        writer.writerow(['Parametro', 'Minimo', 'Maximo', 'Promedio', 'Unidad'])
-        
-        # Write data
-        temp_unit = unidad if unidad != 'celsius' else '°C'
-        if unidad == 'fahrenheit':
-            temp_unit = '°F'
-        elif unidad == 'kelvin':
-            temp_unit = 'K'
-        
-        writer.writerow(['Temperatura', temperatura_stats['min'], temperatura_stats['max'], 
-                        temperatura_stats['promedio'], temp_unit])
-        writer.writerow(['Humedad Relativa', humedad_stats['min'], humedad_stats['max'], 
-                        humedad_stats['promedio'], '%'])
-        writer.writerow(['Viento', viento_stats['min'], viento_stats['max'], 
-                        viento_stats['promedio'], 'km/h'])
-        writer.writerow(['Rafaga de Viento', rafaga_stats['min'], rafaga_stats['max'], 
-                        rafaga_stats['promedio'], 'km/h'])
-        writer.writerow(['Presion', presion_stats['min'], presion_stats['max'], 
-                        presion_stats['promedio'], 'mb'])
-        
-        # Create response
-        response = HttpResponse(output.getvalue(), content_type='text/csv')
-        fecha = dia if dia else 'hoy'
-        response['Content-Disposition'] = f'attachment; filename="estadisticas_{fecha}.csv"'
-        
-        return response
-        
-    except ValueError as e:
-        return Response(
-            {'error': str(e)},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    except requests.RequestException as e:
-        return Response(
-            {'error': f'Error fetching data: {str(e)}'},
-            status=status.HTTP_503_SERVICE_UNAVAILABLE
-        )
-    except Exception as e:
-        return Response(
-            {'error': f'Internal server error: {str(e)}'},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
-
-
-@api_view(['GET'])
-def exportar_mediciones(request):
-    """
-    GET /api/exportar/mediciones
-    Exports all measurements to CSV
-    """
-    try:
-        dia = request.GET.get('dia')
-        
-        client = GlobalMetAPIClient()
-        measurements = client.get_measurements_list(dia)
-        
-        if not measurements:
-            return Response(
-                {'error': 'No measurements found for the specified date'},
-                status=status.HTTP_404_NOT_FOUND
-            )
-        
-        # Create CSV
-        output = io.StringIO()
-        writer = csv.writer(output)
-        
-        # Write header based on first measurement keys
-        if measurements:
-            headers = list(measurements[0].keys())
-            writer.writerow(headers)
+        Args:
+            request: HTTP request object with optional 'dia' parameter
             
-            # Write data
-            for measurement in measurements:
-                row = [measurement.get(header, '') for header in headers]
-                writer.writerow(row)
+        Returns:
+            JsonResponse: Weather data formatted for dashboard consumption
+        """
+        try:
+            # Obtener fecha del parámetro o usar fecha actual
+            date_param = request.GET.get('dia')
+            if date_param:
+                date_str = date_param
+            else:
+                date_str = get_current_date_hermosillo()
+            
+            # Inicializar servicios
+            api_client = GlobalMetAPIClient()
+            processor = WeatherDataProcessor()
+            
+            # Obtener datos de la API
+            raw_data = api_client.get_measurements_list(date_str)
+            
+            # Procesar estadísticas
+            temperature_stats = processor.calculate_statistics(raw_data, 'temperatura_c')
+            humidity_stats = processor.calculate_statistics(raw_data, 'humedad_relativa')
+            wind_stats = processor.calculate_statistics(raw_data, 'viento_kmh')
+            gust_stats = processor.calculate_statistics(raw_data, 'viento_rafaga_kmh')
+            pressure_stats = processor.calculate_statistics(raw_data, 'presion_mb')
+            
+            # Preparar datos para gráficos
+            chart_data = self._prepare_chart_data(raw_data)
+            
+            # Respuesta JSON
+            response_data = {
+                'success': True,
+                'date': date_str,
+                'statistics': {
+                    'temperature': temperature_stats,
+                    'humidity': humidity_stats,
+                    'wind': wind_stats,
+                    'gust': gust_stats,
+                    'pressure': pressure_stats
+                },
+                'chart_data': chart_data,
+                'raw_data_count': len(raw_data)
+            }
+            
+            return JsonResponse(response_data)
+            
+        except WeatherAPIException as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e),
+                'error_type': 'weather_api_error'
+            }, status=500)
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': f'Error interno del servidor: {str(e)}',
+                'error_type': 'internal_error'
+            }, status=500)
+    
+    def _prepare_chart_data(self, raw_data):
+        """
+        Prepare weather data for chart visualization.
         
-        # Create response
-        response = HttpResponse(output.getvalue(), content_type='text/csv')
-        fecha = dia if dia else 'hoy'
-        response['Content-Disposition'] = f'attachment; filename="mediciones_{fecha}.csv"'
+        This method processes raw weather measurements and formats them
+        for use in Chart.js visualizations. It extracts time series data
+        and structures it according to Chart.js dataset requirements.
         
-        return response
+        Args:
+            raw_data: List of raw weather measurement dictionaries
+            
+        Returns:
+            dict: Formatted chart data with labels and datasets
+        """
+        if not raw_data:
+            return {}
         
-    except ValueError as e:
-        return Response(
-            {'error': str(e)},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    except requests.RequestException as e:
-        return Response(
-            {'error': f'Error fetching data: {str(e)}'},
-            status=status.HTTP_503_SERVICE_UNAVAILABLE
-        )
-    except Exception as e:
-        return Response(
-            {'error': f'Internal server error: {str(e)}'},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
+        # Extraer datos para gráficos
+        timestamps = []
+        temperatures = []
+        humidity = []
+        wind_speeds = []
+        wind_gusts = []
+        pressures = []
+        
+        for record in raw_data:
+            # Usar el timestamp si está disponible, sino usar un índice
+            if 'timestamp' in record:
+                timestamps.append(record['timestamp'])
+            else:
+                timestamps.append(f"Registro {len(timestamps) + 1}")
+            
+            temperatures.append(record.get('temperatura_c'))
+            humidity.append(record.get('humedad_relativa'))
+            wind_speeds.append(record.get('viento_kmh'))
+            wind_gusts.append(record.get('viento_rafaga_kmh'))
+            pressures.append(record.get('presion_mb'))
+        
+        return {
+            'labels': timestamps[:24],  # Limitar a 24 puntos para mejor visualización
+            'datasets': {
+                'temperature': {
+                    'label': 'Temperatura (°C)',
+                    'data': temperatures[:24],
+                    'borderColor': 'rgb(255, 99, 132)',
+                    'backgroundColor': 'rgba(255, 99, 132, 0.2)',
+                    'tension': 0.1
+                },
+                'humidity': {
+                    'label': 'Humedad (%)',
+                    'data': humidity[:24],
+                    'borderColor': 'rgb(54, 162, 235)',
+                    'backgroundColor': 'rgba(54, 162, 235, 0.2)',
+                    'tension': 0.1
+                },
+                'wind': {
+                    'label': 'Viento (km/h)',
+                    'data': wind_speeds[:24],
+                    'borderColor': 'rgb(75, 192, 192)',
+                    'backgroundColor': 'rgba(75, 192, 192, 0.2)',
+                    'tension': 0.1
+                },
+                'gust': {
+                    'label': 'Ráfagas (km/h)',
+                    'data': wind_gusts[:24],
+                    'borderColor': 'rgb(255, 205, 86)',
+                    'backgroundColor': 'rgba(255, 205, 86, 0.2)',
+                    'tension': 0.1
+                },
+                'pressure': {
+                    'label': 'Presión (mb)',
+                    'data': pressures[:24],
+                    'borderColor': 'rgb(153, 102, 255)',
+                    'backgroundColor': 'rgba(153, 102, 255, 0.2)',
+                    'tension': 0.1
+                }
+            }
+        } 
