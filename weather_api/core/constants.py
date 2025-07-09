@@ -34,13 +34,14 @@ TEMPERATURE_SYMBOLS = {
 
 # CSV headers for exports
 CSV_HEADERS = {
-    'statistics': ['Parametro', 'Minimo', 'Maximo', 'Promedio', 'Unidad'],
+    'statistics': ['Parametro', 'Minimo', 'Hora_Min', 'Maximo', 'Hora_Max', 'Promedio', 'Unidad'],
     'parameter_names': {
         'temperatura': 'Temperatura',
         'humedad': 'Humedad Relativa',
         'viento': 'Viento',
         'rafaga': 'Rafaga de Viento',
         'presion': 'Presion'
+        
     },
     'units': {
         'humedad': '%',

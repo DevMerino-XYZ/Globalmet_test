@@ -50,9 +50,9 @@
                     </div>
                     <h6 class="card-title text-muted">Temperatura</h6>
                     <div id="temp-stats">
-                        <div class="small text-muted">Min: <span id="temp-min">--</span>°C</div>
+                        <div class="small text-muted">Min: <span id="temp-min">--</span>°C a las <span id="temp-min-time">--</span></div>
                         <div class="h5 mb-0 text-danger">Prom: <span id="temp-avg">--</span>°C</div>
-                        <div class="small text-muted">Max: <span id="temp-max">--</span>°C</div>
+                        <div class="small text-muted">Max: <span id="temp-max">--</span>°C a las <span id="temp-max-time">--</span></div>
                     </div>
                 </div>
             </div>
@@ -66,9 +66,9 @@
                     </div>
                     <h6 class="card-title text-muted">Humedad</h6>
                     <div id="humidity-stats">
-                        <div class="small text-muted">Min: <span id="humidity-min">--</span>%</div>
+                        <div class="small text-muted">Min: <span id="humidity-min">--</span>% a las <span id="humidity-min-time">--</span></div>
                         <div class="h5 mb-0 text-info">Prom: <span id="humidity-avg">--</span>%</div>
-                        <div class="small text-muted">Max: <span id="humidity-max">--</span>%</div>
+                        <div class="small text-muted">Max: <span id="humidity-max">--</span>% a las <span id="humidity-max-time">--</span></div>
                     </div>
                 </div>
             </div>
@@ -82,9 +82,9 @@
                     </div>
                     <h6 class="card-title text-muted">Viento</h6>
                     <div id="wind-stats">
-                        <div class="small text-muted">Min: <span id="wind-min">--</span> km/h</div>
+                        <div class="small text-muted">Min: <span id="wind-min">--</span> km/h a las <span id="wind-min-time">--</span></div>
                         <div class="h5 mb-0 text-success">Prom: <span id="wind-avg">--</span> km/h</div>
-                        <div class="small text-muted">Max: <span id="wind-max">--</span> km/h</div>
+                        <div class="small text-muted">Max: <span id="wind-max">--</span> km/h a las <span id="wind-max-time">--</span></div>
                     </div>
                 </div>
             </div>
@@ -98,9 +98,9 @@
                     </div>
                     <h6 class="card-title text-muted">Ráfagas</h6>
                     <div id="gust-stats">
-                        <div class="small text-muted">Min: <span id="gust-min">--</span> km/h</div>
+                        <div class="small text-muted">Min: <span id="gust-min">--</span> km/h a las <span id="gust-min-time">--</span></div>
                         <div class="h5 mb-0 text-warning">Prom: <span id="gust-avg">--</span> km/h</div>
-                        <div class="small text-muted">Max: <span id="gust-max">--</span> km/h</div>
+                        <div class="small text-muted">Max: <span id="gust-max">--</span> km/h a las <span id="gust-max-time">--</span></div>
                     </div>
                 </div>
             </div>
@@ -114,9 +114,9 @@
                     </div>
                     <h6 class="card-title text-muted">Presión</h6>
                     <div id="pressure-stats">
-                        <div class="small text-muted">Min: <span id="pressure-min">--</span> mb</div>
+                        <div class="small text-muted">Min: <span id="pressure-min">--</span> mb a las <span id="pressure-min-time">--</span></div>
                         <div class="h5 mb-0 text-secondary">Prom: <span id="pressure-avg">--</span> mb</div>
-                        <div class="small text-muted">Max: <span id="pressure-max">--</span> mb</div>
+                        <div class="small text-muted">Max: <span id="pressure-max">--</span> mb a las <span id="pressure-max-time">--</span></div>
                     </div>
                 </div>
             </div>
@@ -288,26 +288,36 @@
         $('#temp-min').text(stats.temperature.min !== null ? stats.temperature.min.toFixed(1) : '--');
         $('#temp-avg').text(stats.temperature.promedio !== null ? stats.temperature.promedio.toFixed(1) : '--');
         $('#temp-max').text(stats.temperature.max !== null ? stats.temperature.max.toFixed(1) : '--');
+        $('#temp-min-time').text(stats.temperature.min_time || '--');
+        $('#temp-max-time').text(stats.temperature.max_time || '--');
         
         // Humidity
         $('#humidity-min').text(stats.humidity.min !== null ? stats.humidity.min.toFixed(1) : '--');
         $('#humidity-avg').text(stats.humidity.promedio !== null ? stats.humidity.promedio.toFixed(1) : '--');
         $('#humidity-max').text(stats.humidity.max !== null ? stats.humidity.max.toFixed(1) : '--');
+        $('#humidity-min-time').text(stats.humidity.min_time || '--');
+        $('#humidity-max-time').text(stats.humidity.max_time || '--');
         
         // Wind
         $('#wind-min').text(stats.wind.min !== null ? stats.wind.min.toFixed(1) : '--');
         $('#wind-avg').text(stats.wind.promedio !== null ? stats.wind.promedio.toFixed(1) : '--');
         $('#wind-max').text(stats.wind.max !== null ? stats.wind.max.toFixed(1) : '--');
+        $('#wind-min-time').text(stats.wind.min_time || '--');
+        $('#wind-max-time').text(stats.wind.max_time || '--');
         
         // Gusts
         $('#gust-min').text(stats.gust.min !== null ? stats.gust.min.toFixed(1) : '--');
         $('#gust-avg').text(stats.gust.promedio !== null ? stats.gust.promedio.toFixed(1) : '--');
         $('#gust-max').text(stats.gust.max !== null ? stats.gust.max.toFixed(1) : '--');
+        $('#gust-min-time').text(stats.gust.min_time || '--');
+        $('#gust-max-time').text(stats.gust.max_time || '--');
         
         // Pressure
         $('#pressure-min').text(stats.pressure.min !== null ? stats.pressure.min.toFixed(1) : '--');
         $('#pressure-avg').text(stats.pressure.promedio !== null ? stats.pressure.promedio.toFixed(1) : '--');
         $('#pressure-max').text(stats.pressure.max !== null ? stats.pressure.max.toFixed(1) : '--');
+        $('#pressure-min-time').text(stats.pressure.min_time || '--');
+        $('#pressure-max-time').text(stats.pressure.max_time || '--');
     }
 
     // Update charts

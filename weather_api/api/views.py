@@ -493,35 +493,45 @@ class ExportStatisticsView(BaseWeatherView):
         writer.writerow([
             CSV_HEADERS['parameter_names']['temperatura'],
             temperatura_stats['min'],
+            temperatura_stats['min_time'],
             temperatura_stats['max'],
+            temperatura_stats['max_time'],
             temperatura_stats['promedio'],
             temp_unit
         ])
         writer.writerow([
             CSV_HEADERS['parameter_names']['humedad'],
             humedad_stats['min'],
+            humedad_stats['min_time'],
             humedad_stats['max'],
+            humedad_stats['max_time'],
             humedad_stats['promedio'],
             CSV_HEADERS['units']['humedad']
         ])
         writer.writerow([
             CSV_HEADERS['parameter_names']['viento'],
             viento_stats['min'],
+            viento_stats['min_time'],
             viento_stats['max'],
+            viento_stats['max_time'],
             viento_stats['promedio'],
             CSV_HEADERS['units']['viento']
         ])
         writer.writerow([
             CSV_HEADERS['parameter_names']['rafaga'],
             rafaga_stats['min'],
+            rafaga_stats['min_time'],
             rafaga_stats['max'],
+            rafaga_stats['max_time'],
             rafaga_stats['promedio'],
             CSV_HEADERS['units']['rafaga']
         ])
         writer.writerow([
             CSV_HEADERS['parameter_names']['presion'],
             presion_stats['min'],
+            presion_stats['min_time'],
             presion_stats['max'],
+            presion_stats['max_time'],
             presion_stats['promedio'],
             CSV_HEADERS['units']['presion']
         ])

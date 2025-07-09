@@ -13,9 +13,8 @@ from django.utils.decorators import method_decorator
 from django.views import View
 from .core.services import GlobalMetAPIClient, WeatherDataProcessor
 from .core.exceptions import WeatherAPIException
-from .utils.helpers import get_current_date_hermosillo
+from .utils.helpers import format_timestamp_for_chart, get_current_date_hermosillo
 import json
-
 
 def dashboard(request):
     """
@@ -122,19 +121,6 @@ class WeatherDataView(View):
             }, status=500)
     
     def _prepare_chart_data(self, raw_data):
-        """
-        Prepare weather data for chart visualization.
-        
-        This method processes raw weather measurements and formats them
-        for use in Chart.js visualizations. It extracts time series data
-        and structures it according to Chart.js dataset requirements.
-        
-        Args:
-            raw_data: List of raw weather measurement dictionaries
-            
-        Returns:
-            dict: Formatted chart data with labels and datasets
-        """
         if not raw_data:
             return {}
         
@@ -147,9 +133,8 @@ class WeatherDataView(View):
         pressures = []
         
         for record in raw_data:
-            # Usar el timestamp si está disponible, sino usar un índice
-            if 'timestamp' in record:
-                timestamps.append(record['timestamp'])
+            if 'fecha_medicion' in record:
+                timestamps.append(format_timestamp_for_chart(record['fecha_medicion']))
             else:
                 timestamps.append(f"Registro {len(timestamps) + 1}")
             

@@ -1,10 +1,3 @@
-"""
-Weather API Services
-
-This module contains the core business logic services for the weather API application.
-It includes the GlobalMet API client and weather data processing services.
-"""
-
 import requests
 from datetime import datetime, date
 from django.conf import settings
@@ -31,14 +24,6 @@ from ..utils.helpers import (
 
 
 class GlobalMetAPIClient:
-    """
-    Client service for consuming GlobalMet API weather data.
-    
-    This class handles all communication with the external GlobalMet API,
-    including authentication, request formatting, and response processing.
-    It provides a clean interface for fetching weather measurements.
-    """
-    
     def __init__(self):
         """Initialize the GlobalMet API client with configuration settings."""
         self.base_url = settings.GLOBALMET_API_URL
@@ -49,23 +34,6 @@ class GlobalMetAPIClient:
         }
     
     def get_measurements_by_date(self, date_str: Optional[str] = None) -> Dict:
-        """
-        Fetch weather measurements for a specific date from GlobalMet API.
-        
-        This method makes an HTTP request to the GlobalMet API to retrieve
-        weather measurements for the specified date. If no date is provided,
-        it uses the current date in America/Hermosillo timezone.
-        
-        Args:
-            date_str: Date in YYYY-MM-DD format. If None, uses current date in America/Hermosillo timezone
-            
-        Returns:
-            Dictionary with measurement data from the API
-            
-        Raises:
-            InvalidDateFormatException: If date format is invalid
-            GlobalMetAPIException: If API request fails
-        """
         if date_str is None:
             date_str = get_current_date_hermosillo()
         else:
@@ -84,18 +52,7 @@ class GlobalMetAPIClient:
             raise GlobalMetAPIException(str(e), status_code)
     
     def get_measurements_list(self, date_str: Optional[str] = None) -> List[Dict]:
-        """
-        Get weather measurements as a standardized list format.
-        
-        This method normalizes the API response into a consistent list format,
-        regardless of how the external API structures its response data.
-        
-        Args:
-            date_str: Date in YYYY-MM-DD format
-            
-        Returns:
-            List of measurement dictionaries
-        """
+
         data = self.get_measurements_by_date(date_str)
         
         # The API might return data in different formats, handle both cases
@@ -117,81 +74,61 @@ class GlobalMetAPIClient:
 
 
 class WeatherDataProcessor:
-    """
-    Service for processing and analyzing weather data.
-    
-    This class provides statistical analysis capabilities for weather measurements,
-    including calculating min/max/average values and temperature unit conversions.
-    It handles data validation and error management during processing operations.
-    """
-    
     @staticmethod
     def calculate_statistics(measurements: List[Dict], field: str) -> Dict:
-        """
-        Calculate statistical summary (min, max, average) for a specific weather parameter.
-        
-        This method processes a list of weather measurements and computes
-        basic statistical metrics for the specified field. It handles missing
-        values and invalid data gracefully.
-        
-        Args:
-            measurements: List of measurement dictionaries
-            field: Field name to calculate statistics for
-            
-        Returns:
-            Dictionary with min, max, and promedio (average) values
-            
-        Raises:
-            DataProcessingException: If there's an error processing the data
-            NoDataFoundException: If no measurements are provided
-        """
         if not measurements:
             raise NoDataFoundException("No measurements provided")
-        
-        values = []
-        
+        values_with_timestamps = []
         for measurement in measurements:
             if field in measurement and measurement[field] is not None:
                 value = safe_float_conversion(measurement[field])
                 if value is not None:
-                    values.append(value)
+                    timestamp = measurement.get('fecha_medicion', None)
+                    values_with_timestamps.append((value, timestamp))
         
-        if not values:
+        if not values_with_timestamps:
             return {
                 'min': None,
                 'max': None,
-                'promedio': None
+                'promedio': None,
+                'min_time': None,
+                'max_time': None
             }
         
         try:
+            # Separar valores y timestamps
+            values = [item[0] for item in values_with_timestamps]
+            
+            # Encontrar min y max con sus timestamps
+            min_value = min(values)
+            max_value = max(values)
+            
+            # Encontrar timestamps correspondientes
+            min_timestamp = None
+            max_timestamp = None
+            
+            for value, timestamp in values_with_timestamps:
+                if value == min_value and min_timestamp is None:
+                    min_timestamp = timestamp
+                if value == max_value and max_timestamp is None:
+                    max_timestamp = timestamp
+            
+            # Formatear timestamps
+            from ..utils.helpers import extract_time_from_timestamp
+            
             return {
-                'min': min(values),
-                'max': max(values),
-                'promedio': calculate_average(values)
+                'min': min_value,
+                'max': max_value,
+                'promedio': calculate_average(values),
+                'min_time': extract_time_from_timestamp(min_timestamp),
+                'max_time': extract_time_from_timestamp(max_timestamp)
             }
         except Exception as e:
             raise DataProcessingException(f"Error calculating statistics for {field}: {str(e)}", field)
     
     @staticmethod
     def convert_temperature(temp_celsius: Optional[float], unit: str) -> Optional[float]:
-        """
-        Convert temperature from Celsius to the specified unit.
-        
-        This method performs temperature unit conversion from Celsius to
-        Fahrenheit or Kelvin. It validates the target unit and handles
-        null values appropriately.
-        
-        Args:
-            temp_celsius: Temperature in Celsius
-            unit: Target unit (celsius, fahrenheit, kelvin)
-            
-        Returns:
-            Temperature in specified unit, or None if input is None
-            
-        Raises:
-            InvalidTemperatureUnitException: If unit is invalid
-            TemperatureConversionException: If conversion fails
-        """
+
         if not validate_temperature_unit(unit):
             raise InvalidTemperatureUnitException(unit)
         
@@ -211,22 +148,6 @@ class WeatherDataProcessor:
     
     @staticmethod
     def convert_temperature_stats(stats: Dict, unit: str) -> Dict:
-        """
-        Convert temperature statistics to the specified unit.
-        
-        This method applies temperature unit conversion to all statistical
-        values (min, max, average) in a statistics dictionary.
-        
-        Args:
-            stats: Statistics dictionary with min, max, promedio
-            unit: Target unit for conversion
-            
-        Returns:
-            Converted statistics dictionary
-            
-        Raises:
-            InvalidTemperatureUnitException: If unit is invalid
-        """
         if not validate_temperature_unit(unit):
             raise InvalidTemperatureUnitException(unit)
         
