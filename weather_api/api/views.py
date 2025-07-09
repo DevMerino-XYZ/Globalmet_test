@@ -88,13 +88,7 @@ class BaseWeatherView(APIView):
 
 
 class TemperatureStatisticsView(BaseWeatherView):
-    """
-    API endpoint for temperature statistics with unit conversion.
-    
-    This view provides temperature statistics (min, max, average) for a given date
-    with optional temperature unit conversion (celsius, fahrenheit, kelvin).
-    """
-    
+   
     @extend_schema(
         summary="Get temperature statistics",
         description="Returns temperature statistics with optional unit conversion",
@@ -122,12 +116,6 @@ class TemperatureStatisticsView(BaseWeatherView):
         }
     )
     def get(self, request):
-        """
-        Get temperature statistics for the specified date and unit.
-        
-        Retrieves temperature measurements from GlobalMet API and calculates
-        statistical summary with optional unit conversion.
-        """
         serializer = TemperatureQuerySerializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
         
@@ -150,16 +138,7 @@ class TemperatureStatisticsView(BaseWeatherView):
             stats = processor.convert_temperature_stats(stats, unidad)
         
         return Response(stats)
-
-
 class HumidityStatisticsView(BaseWeatherView):
-    """
-    API endpoint for humidity statistics.
-    
-    This view provides humidity statistics (min, max, average) for a given date.
-    Humidity is measured as relative humidity percentage.
-    """
-    
     @extend_schema(
         summary="Get humidity statistics",
         description="Returns humidity statistics",
@@ -179,12 +158,6 @@ class HumidityStatisticsView(BaseWeatherView):
         }
     )
     def get(self, request):
-        """
-        Get humidity statistics for the specified date.
-        
-        Retrieves humidity measurements from GlobalMet API and calculates
-        statistical summary (min, max, average).
-        """
         serializer = WeatherQuerySerializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
         
@@ -201,13 +174,6 @@ class HumidityStatisticsView(BaseWeatherView):
 
 
 class WindStatisticsView(BaseWeatherView):
-    """
-    API endpoint for wind speed statistics.
-    
-    This view provides wind speed statistics (min, max, average) for a given date.
-    Wind speed is measured in kilometers per hour (km/h).
-    """
-    
     @extend_schema(
         summary="Get wind statistics",
         description="Returns wind speed statistics",
@@ -227,12 +193,6 @@ class WindStatisticsView(BaseWeatherView):
         }
     )
     def get(self, request):
-        """
-        Get wind speed statistics for the specified date.
-        
-        Retrieves wind speed measurements from GlobalMet API and calculates
-        statistical summary (min, max, average).
-        """
         serializer = WeatherQuerySerializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
         
@@ -249,13 +209,6 @@ class WindStatisticsView(BaseWeatherView):
 
 
 class WindGustStatisticsView(BaseWeatherView):
-    """
-    API endpoint for wind gust statistics.
-    
-    This view provides wind gust statistics (min, max, average) for a given date.
-    Wind gusts represent peak wind speeds measured in kilometers per hour (km/h).
-    """
-    
     @extend_schema(
         summary="Get wind gust statistics",
         description="Returns wind gust statistics",
@@ -292,13 +245,6 @@ class WindGustStatisticsView(BaseWeatherView):
 
 
 class PressureStatisticsView(BaseWeatherView):
-    """
-    API endpoint for atmospheric pressure statistics.
-    
-    This view provides atmospheric pressure statistics (min, max, average) for a given date.
-    Pressure is measured in millibars (mb).
-    """
-    
     @extend_schema(
         summary="Get pressure statistics",
         description="Returns pressure statistics",
@@ -318,12 +264,6 @@ class PressureStatisticsView(BaseWeatherView):
         }
     )
     def get(self, request):
-        """
-        Get atmospheric pressure statistics for the specified date.
-        
-        Retrieves pressure measurements from GlobalMet API and calculates
-        statistical summary (min, max, average).
-        """
         serializer = WeatherQuerySerializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
         
@@ -340,14 +280,6 @@ class PressureStatisticsView(BaseWeatherView):
 
 
 class DailySummaryView(BaseWeatherView):
-    """
-    API endpoint for comprehensive daily weather summary.
-    
-    This view provides a complete daily weather summary including statistics
-    for all weather parameters (temperature, humidity, wind, gusts, pressure)
-    in a single API call. Temperature units can be converted as needed.
-    """
-    
     @extend_schema(
         summary="Get daily weather summary",
         description="Returns all weather statistics in a single call",
@@ -375,12 +307,6 @@ class DailySummaryView(BaseWeatherView):
         }
     )
     def get(self, request):
-        """
-        Get comprehensive daily weather summary with all parameters.
-        
-        Retrieves all weather measurements from GlobalMet API and calculates
-        statistics for temperature, humidity, wind, gusts, and pressure.
-        """
         serializer = TemperatureQuerySerializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
         
@@ -416,14 +342,6 @@ class DailySummaryView(BaseWeatherView):
 
 
 class ExportStatisticsView(BaseWeatherView):
-    """
-    API endpoint for exporting weather statistics to CSV format.
-    
-    This view generates a CSV file containing weather statistics summary
-    for all parameters. The file can be downloaded directly and includes
-    min, max, and average values with appropriate units.
-    """
-    
     @extend_schema(
         summary="Export statistics to CSV",
         description="Generates CSV file with weather statistics",
@@ -451,12 +369,6 @@ class ExportStatisticsView(BaseWeatherView):
         }
     )
     def get(self, request):
-        """
-        Generate and download CSV file with weather statistics.
-        
-        Creates a CSV file containing statistical summary of all weather
-        parameters with appropriate headers and unit information.
-        """
         serializer = CSVExportQuerySerializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
         
@@ -543,16 +455,7 @@ class ExportStatisticsView(BaseWeatherView):
         
         return response
 
-
 class ExportMeasurementsView(BaseWeatherView):
-    """
-    API endpoint for exporting raw weather measurements to CSV format.
-    
-    This view generates a CSV file containing all individual weather measurements
-    for a given date. Unlike the statistics export, this includes all raw data
-    points with their original timestamps and values.
-    """
-    
     @extend_schema(
         summary="Export measurements to CSV",
         description="Generates CSV file with all measurements",
@@ -573,38 +476,27 @@ class ExportMeasurementsView(BaseWeatherView):
         }
     )
     def get(self, request):
-        """
-        Generate and download CSV file with all raw weather measurements.
-        
-        Creates a CSV file containing all individual measurement records
-        with timestamps and values for each weather parameter.
-        """
         serializer = WeatherQuerySerializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
         
         dia = serializer.validated_data.get('dia')
         dia_str = dia.strftime('%Y-%m-%d') if dia else None
-        
+      
         client = GlobalMetAPIClient()
         measurements = client.get_measurements_list(dia_str)
-        
         if not measurements:
-            raise NoDataFoundException(dia_str or 'today')
-        
+            raise NoDataFoundException(dia_str or 'today')     
         # Create CSV
         output = io.StringIO()
         writer = csv.writer(output)
-        
         # Write header based on first measurement keys
         if measurements:
             headers = list(measurements[0].keys())
             writer.writerow(headers)
-            
             # Write data
             for measurement in measurements:
                 row = [measurement.get(header, '') for header in headers]
                 writer.writerow(row)
-        
         # Create response
         response = HttpResponse(output.getvalue(), content_type='text/csv')
         filename = format_filename('mediciones', dia_str)

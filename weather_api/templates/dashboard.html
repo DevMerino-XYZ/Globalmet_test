@@ -17,6 +17,11 @@
                     <p class="text-muted mb-0">Estación 689 - GlobalMet API</p>
                 </div>
                 <div class="d-flex gap-2">
+                    <select id="temp-unit-selector" class="form-select" style="width: auto;">
+                        <option value="celsius">°C</option>
+                        <option value="fahrenheit">°F</option>
+                        <option value="kelvin">K</option>
+                    </select>
                     <input type="date" id="date-picker" class="form-control" value="{{ current_date }}">
                     <button id="refresh-btn" class="btn btn-primary">
                         <i class="fas fa-sync-alt"></i> Actualizar
@@ -50,9 +55,9 @@
                     </div>
                     <h6 class="card-title text-muted">Temperatura</h6>
                     <div id="temp-stats">
-                        <div class="small text-muted">Min: <span id="temp-min">--</span>°C a las <span id="temp-min-time">--</span></div>
-                        <div class="h5 mb-0 text-danger">Prom: <span id="temp-avg">--</span>°C</div>
-                        <div class="small text-muted">Max: <span id="temp-max">--</span>°C a las <span id="temp-max-time">--</span></div>
+                        <div class="small text-muted">Min: <span id="temp-min">--</span><span id="temp-unit-display">°C</span> a las <span id="temp-min-time">--</span></div>
+                        <div class="h5 mb-0 text-danger">Prom: <span id="temp-avg">--</span><span id="temp-unit-display-avg">°C</span></div>
+                        <div class="small text-muted">Max: <span id="temp-max">--</span><span id="temp-unit-display-max">°C</span> a las <span id="temp-max-time">--</span></div>
                     </div>
                 </div>
             </div>
@@ -240,11 +245,16 @@
         $('#date-picker').change(function() {
             loadWeatherData();
         });
+        
+        $('#temp-unit-selector').change(function() {
+            loadWeatherData();
+        });
     });
 
     // Load weather data
     function loadWeatherData() {
         const selectedDate = $('#date-picker').val();
+        const selectedUnit = $('#temp-unit-selector').val();
         
         // Show loading
         $('#loading').show();
@@ -256,7 +266,8 @@
             url: '{% url "weather_data" %}',
             method: 'GET',
             data: {
-                dia: selectedDate
+                dia: selectedDate,
+                unidad: selectedUnit
             },
             success: function(data) {
                 if (data.success) {
@@ -284,12 +295,21 @@
 
     // Update statistics cards
     function updateStatistics(stats) {
+        // Get current temperature unit
+        const selectedUnit = $('#temp-unit-selector').val();
+        const unitSymbol = getTemperatureSymbol(selectedUnit);
+        
         // Temperature
         $('#temp-min').text(stats.temperature.min !== null ? stats.temperature.min.toFixed(1) : '--');
         $('#temp-avg').text(stats.temperature.promedio !== null ? stats.temperature.promedio.toFixed(1) : '--');
         $('#temp-max').text(stats.temperature.max !== null ? stats.temperature.max.toFixed(1) : '--');
         $('#temp-min-time').text(stats.temperature.min_time || '--');
         $('#temp-max-time').text(stats.temperature.max_time || '--');
+        
+        // Update temperature unit symbols
+        $('#temp-unit-display').text(unitSymbol);
+        $('#temp-unit-display-avg').text(unitSymbol);
+        $('#temp-unit-display-max').text(unitSymbol);
         
         // Humidity
         $('#humidity-min').text(stats.humidity.min !== null ? stats.humidity.min.toFixed(1) : '--');
@@ -355,7 +375,7 @@
                         beginAtZero: false,
                         title: {
                             display: true,
-                            text: 'Temperatura (°C)'
+                            text: 'Temperatura (' + getTemperatureSymbol($('#temp-unit-selector').val()) + ')'
                         }
                     }
                 }
@@ -471,6 +491,20 @@
         $('#error-message').text(message);
         $('#error-alert').show();
         $('#stats-cards').hide();
+    }
+    
+    // Get temperature symbol based on unit
+    function getTemperatureSymbol(unit) {
+        switch(unit) {
+            case 'celsius':
+                return '°C';
+            case 'fahrenheit':
+                return '°F';
+            case 'kelvin':
+                return 'K';
+            default:
+                return '°C';
+        }
     }
 </script>
 {% endblock %} 

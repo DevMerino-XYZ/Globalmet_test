@@ -52,19 +52,7 @@ class WeatherDataView(View):
         return super().dispatch(*args, **kwargs)
     
     def get(self, request):
-        """
-        Fetch and process weather data for dashboard display.
-        
-        This method retrieves weather measurements from the GlobalMet API,
-        calculates statistics for all weather parameters, and formats the
-        data for use in charts and dashboard widgets.
-        
-        Args:
-            request: HTTP request object with optional 'dia' parameter
-            
-        Returns:
-            JsonResponse: Weather data formatted for dashboard consumption
-        """
+
         try:
             # Obtener fecha del parámetro o usar fecha actual
             date_param = request.GET.get('dia')
@@ -72,6 +60,9 @@ class WeatherDataView(View):
                 date_str = date_param
             else:
                 date_str = get_current_date_hermosillo()
+            
+            # Obtener unidad de temperatura
+            temp_unit = request.GET.get('unidad', 'celsius')
             
             # Inicializar servicios
             api_client = GlobalMetAPIClient()
@@ -82,13 +73,18 @@ class WeatherDataView(View):
             
             # Procesar estadísticas
             temperature_stats = processor.calculate_statistics(raw_data, 'temperatura_c')
+            
+            # Convertir temperatura a la unidad solicitada
+            if temp_unit != 'celsius':
+                temperature_stats = processor.convert_temperature_stats(temperature_stats, temp_unit)
+            
             humidity_stats = processor.calculate_statistics(raw_data, 'humedad_relativa')
             wind_stats = processor.calculate_statistics(raw_data, 'viento_kmh')
             gust_stats = processor.calculate_statistics(raw_data, 'viento_rafaga_kmh')
             pressure_stats = processor.calculate_statistics(raw_data, 'presion_mb')
             
             # Preparar datos para gráficos
-            chart_data = self._prepare_chart_data(raw_data)
+            chart_data = self._prepare_chart_data(raw_data, temp_unit)
             
             # Respuesta JSON
             response_data = {
@@ -120,7 +116,7 @@ class WeatherDataView(View):
                 'error_type': 'internal_error'
             }, status=500)
     
-    def _prepare_chart_data(self, raw_data):
+    def _prepare_chart_data(self, raw_data, temp_unit='celsius'):
         if not raw_data:
             return {}
         
@@ -132,23 +128,37 @@ class WeatherDataView(View):
         wind_gusts = []
         pressures = []
         
+        # Inicializar procesador para conversión de temperatura
+        processor = WeatherDataProcessor()
+        
         for record in raw_data:
             if 'fecha_medicion' in record:
                 timestamps.append(format_timestamp_for_chart(record['fecha_medicion']))
             else:
                 timestamps.append(f"Registro {len(timestamps) + 1}")
             
-            temperatures.append(record.get('temperatura_c'))
+            # Convertir temperatura a la unidad solicitada
+            temp_celsius = record.get('temperatura_c')
+            if temp_celsius is not None and temp_unit != 'celsius':
+                temp_converted = processor.convert_temperature(temp_celsius, temp_unit)
+                temperatures.append(temp_converted)
+            else:
+                temperatures.append(temp_celsius)
+            
             humidity.append(record.get('humedad_relativa'))
             wind_speeds.append(record.get('viento_kmh'))
             wind_gusts.append(record.get('viento_rafaga_kmh'))
             pressures.append(record.get('presion_mb'))
         
+        # Obtener símbolo de unidad
+        from .utils.helpers import get_temperature_symbol
+        temp_symbol = get_temperature_symbol(temp_unit)
+        
         return {
             'labels': timestamps[:24],  # Limitar a 24 puntos para mejor visualización
             'datasets': {
                 'temperature': {
-                    'label': 'Temperatura (°C)',
+                    'label': f'Temperatura ({temp_symbol})',
                     'data': temperatures[:24],
                     'borderColor': 'rgb(255, 99, 132)',
                     'backgroundColor': 'rgba(255, 99, 132, 0.2)',
